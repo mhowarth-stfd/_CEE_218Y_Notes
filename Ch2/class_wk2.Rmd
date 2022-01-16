@@ -1,0 +1,49 @@
+---
+title: "class wk2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, wanring = F, message = F)
+```
+
+
+```{r}
+library(tidyverse)
+library(esri2sf)
+library(leaflet)
+
+epa_zoning <- esri2sf("https://services8.arcgis.com/0IC8hha3hgQkmGoa/arcgis/rest/services/EastPaloAltoZoning_2021_WFL1/FeatureServer/1")
+
+smc_exemption <- read_csv("https://datahub.smcgov.org/api/views/pmvw-bs84/rows.csv?accessType=DOWNLOAD")
+
+epa_exemption <- smc_exemption %>% 
+  mutate(
+    APN = `Parcel Number` %>% 
+      str_replace_all("-","")
+  ) %>% 
+  filter(APN %in% epa_zoning$APN) %>% 
+  left_join(epa_zoning) %>% 
+  st_as_sf() %>% 
+  filter(New_Zone == "R-LD")
+
+leaflet() %>% 
+  addProviderTiles(provider = providers$CartoDB.Positron) %>% 
+  addPolygons(
+    data = epa_exemption %>% 
+      filter(`Fiscal Year` == "2018/2019"),
+    fillColor = "yellow",
+    color = "black",
+    weight = 0.5
+  ) %>% 
+  addPolygons(
+    data = epa_exemption %>% 
+      filter(`Fiscal Year` == "2018/2019") %>% 
+      filter(Exemption %in% c(5600,7000)),
+    fillColor = "blue",
+    color = "black",
+    weight = 0.5,
+    fillOpacity = 1
+  )
+```
+
